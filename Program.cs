@@ -16,19 +16,51 @@ namespace TwitterAPIIntegration
 {
     static class Program
     {
-        //Login to MySql
+	  
+       /*
+	* We can create multiple tables in a database, let's combine these two to have the same tables, 
+	* so we don't have to create two connections
+	*/
         public static string MySQLConnectionString = "SERVER=localhost;DATABASE=srs;UID=root;PASSWORD=password;";
         public static string MySQLConnectionString2 = "SERVER=localhost;DATABASE=companydata;UID=root;PASSWORD=password;";
 
-        //Get MySql table
+	/*
+	 * Example: 
+	 * I want to have a database that stores tweets, my prediction, and various images of cats.
+	 * Let's first create this database with the following:
+	 * CREATE DATABASE databaseName;
+	 * USE databaseName
+	 *
+	 * The USE statement, allows us to execute all of our following queries using the same database. Eliminating the need for 2 databases.
+	 *
+	 * Let's say that I want to keep tweets as a table, that has tweets, it's length, and the link to the tweet. We
+	 * call the following a Schema for the table:
+	 * 
+	 * Tweets(varchar(255), int, mediumText)
+	 *
+	 * We could create the table like this:
+	 * 
+	 * CREATE TABLE IF NOT EXISTS Tweets(tweet VARCHAR(255), length INT, link MEDIUMTEXT)
+	 *
+	 * We can create more tables in a similar way. All will be held in the same database
+	 * Do you need tables to be able to "communicate" with each other? It's something we can do!
+	 */
+
+        
         private static List<string>[] LoadData(string TableName, string column2, string column3, int conn)
         {
+	
+		// Yikes! A list of lists? What are we going to be using this for?
             List<string>[] list = new List<string>[3];
             list[0] = new List<string>();
             list[1] = new List<string>();
             list[2] = new List<string>();
 
             MySqlConnection connection = new MySqlConnection();
+
+	    /*
+	     * Oh no! Let's combine our databases! Two connections = :( = Slow
+	     */
 
             if (conn == 1)
             {
@@ -39,10 +71,15 @@ namespace TwitterAPIIntegration
                 connection = new MySqlConnection(MySQLConnectionString2);
             }
             connection.Open();
+	    /*
+	     * How bout that USE statement ;)
+	     */
 
             string query = "SELECT * FROM srs." + TableName;
             MySqlCommand cmd = new MySqlCommand(query, connection);
             MySqlDataReader dataReader = cmd.ExecuteReader();
+
+	    // I imagine if we're reading in a lot of data this will slow us down.
 
             while(dataReader.Read())
             {
@@ -54,6 +91,7 @@ namespace TwitterAPIIntegration
                 }
             }
 
+	    // Good! Always gotta do this!
             dataReader.Close();
             connection.Close();
 
@@ -62,9 +100,13 @@ namespace TwitterAPIIntegration
 
         private static void AddData(string TableName, string column, string contents, string column2, string contents2, int conn)
         {
+		// How often are we refrencing the database? It might not be wise to keep opening the connection if we're accesing it constantly
             MySqlConnection connection = new MySqlConnection();
             string query;
             string database = "";
+
+	    // That USE statement will get rid of these if/elseif statements/
+	    // We just have to make a distinction of what table we want to use
 
             if (conn == 1)
             {
@@ -96,7 +138,7 @@ namespace TwitterAPIIntegration
         {
             MySqlConnection connection = new MySqlConnection();
             string database = "";
-
+		// See above comments
             if (conn == 1)
             {
                 connection = new MySqlConnection(MySQLConnectionString);
@@ -119,6 +161,10 @@ namespace TwitterAPIIntegration
         private static void CreateTable(string TableName, string column1, string type1, string column2, string type2, string column3, string type3, int conn)
         {
             MySqlConnection connection = new MySqlConnection();
+	    // We might want to do this locally, instead of inside the program each time.... Also 
+	    // Since we're not saying "IF NOT EXISTS" you're probably making a lot of tables
+	    // Which is probably slowing us down.
+	    // So let's set this up the way we want it locally, and then not mess with it in the program/
             
             if (conn == 1)
             {
@@ -137,32 +183,13 @@ namespace TwitterAPIIntegration
             connection.Close();
         }
 
-        /*private static void Main()
-        {
-            AddData("all_word_arrays", "sentiment", "-1", "company", "$MMM", 1);
-            for (int i = 1; i < 6; i++)
-            {
-                UpdateData("all_word_arrays", ("word" + i), (i + ":0"), 1, 1);
-            }
-        }*/
-
-        //Old code that needs to be updated to use MySql tables instead of files
+        
 #if true
-        //public static string[] keyWords = new string[] { "Texas", "United States" };
-        /*public static string StockSymbols = "C:\\Users\\William\\Desktop\\SRS 2017-2018\\Read Twitter Example\\S&P 500 Symbols.txt";
-        public static string StockNames = "C:\\Users\\William\\Desktop\\SRS 2017-2018\\Read Twitter Example\\S&P 500 Names.txt";
-        public static string TweetsFile = "C:\\Users\\William\\Desktop\\SRS 2017-2018\\Read Twitter Example\\TweetsList.txt";
-        public static string PrevTweets = "C:\\Users\\William\\Desktop\\SRS 2017-2018\\Read Twitter Example\\PrevTweets.txt";
-        public static string AllTweetWords = "C:\\Users\\William\\Desktop\\SRS 2017-2018\\Read Twitter Example\\All Tweet Words.txt";
-        public static string CompanyFiles = "C:\\Users\\William\\Desktop\\SRS 2017-2018\\Read Twitter Example\\Company Files";*/
-
+        
         private static void Main(string[] args)
         {
             Console.WriteLine("I think I can, I think I can, I think I can...");
             var tweetList = GetTwitterFeeds();
-            /*string FileVariable;
-            string FileVariable2;
-            string FileVariable3;*/
             string CompanyVariable;
             string CompanyVariable2;
             string CompanyVariable3;
@@ -171,190 +198,179 @@ namespace TwitterAPIIntegration
             bool FileVar3Set = false;
             int ID = 1;
 
-            Console.WriteLine("Tweets Count " + tweetList.Count); // Make sure to change the path according to your system
-            //File.Delete(TweetsFile);
-            //StreamWriter sw = new StreamWriter(TweetsFile, true);
-            //StreamWriter swpt = new StreamWriter(PrevTweets, true);
+            Console.WriteLine("Tweets Count " + tweetList.Count); 
+            
+            
+            
 
             foreach (var item in tweetList)
             {
-                //swpt.Write(item.Text);
+                
                 item.Text = item.Text.Replace("'", "");
                 AddData("previous_tweets", "tweet", item.Text, "", "", 1);
                 Console.WriteLine("tweet added to previous tweets");
 
                 item.Text = ReplaceChars(item.Text);
 
-                //item.Text = item.Text.ToLower();
-                /*for(int i = 0; i < File.ReadAllLines(StockNames).Length; i ++)
+               for (int i = 0; i < LoadData("all_companies", "symbol", "name", 1)[1].Count; i++)
                 {
-                    if(item.Text.Contains(File.ReadAllLines(StockNames)[i]))                     // Debug if unknown tweet included
-                    {
-                        sw.WriteLine(item.Text + " " + i);
-                    }
-                }*/
-
-                for (int i = 0; i < LoadData("all_companies", "symbol", "name", 1)[1].Count; i++)
-                //How could I use MySql here?
-                //How could I check if a string contains the value at a certain row in MySql?
-                //for (int i = 0; i < File.ReadAllLines(StockSymbols).Length; i++)
-                {
-                    //if ((item.Text.Contains((File.ReadAllLines(StockSymbols)[i] + " "), StringComparison.OrdinalIgnoreCase) || item.Text.Contains((File.ReadAllLines(StockNames)[i] + " "), StringComparison.OrdinalIgnoreCase)) && !FileVarSet)
+                    // This is hard to read, perhaps you could break it up into variables and then IF it. 
+		    // Boolean logic hard to follow
                     if ((item.Text.Contains(((LoadData("all_companies", "symbol", "name", 1)[1])[i] + " "), StringComparison.OrdinalIgnoreCase) || item.Text.Contains(((LoadData("all_companies", "symbol", "name", 1)[2])[i] + " "), StringComparison.OrdinalIgnoreCase)) && !FileVarSet)
                     {
-                        //FileVariable = File.ReadAllLines(StockSymbols)[i];
+                        
                         CompanyVariable = (LoadData("all_companies", "symbol", "name", 1)[1])[i];
 
                         FileVarSet = true;
-                        //item.Text = item.Text.Replace(File.ReadAllLines(StockSymbols)[i], "");
-                        //item.Text = item.Text.Replace(File.ReadAllLines(StockNames)[i], "");
+                        
+                        
 
-                        /*item.Text = Regex.Replace(item.Text, @"@\w+", "USERNAME ");
-                        item.Text = Regex.Replace(item.Text, @"https?://[-\w]+(\.\w[-\w]*)+(:\d+)?(/[^.!,?;""\'<>()\[\]\{\}\s\x7F-\xFF]*([.!,?]+[^.!,?;""\'<>\(\)\[\]\{\}\s\x7F-\xFF]+)*)?", "URL ");
-                        item.Text = item.Text.Replace("https://", "URL ");*/
+                        /*item.Text = Regex.Replace(item.Text, @"@\w+", "USERNAME ");/*{{{*/
+                        item.Text = Regex.Replace(item.Text, @"https?:
+                        item.Text = item.Text.Replace("https:
 
-                        //StreamWriter sw1 = new StreamWriter(CompanyFiles + "\\" + FileVariable + ".train", true);
+                        
 
-                        //CreateTable(CompanyVariable, "ID", "INT", "Sentiment", "INT", "Words", "VarChar(1000)", 2);
-                        //Console.WriteLine("new table created");
+                        
+                        
 
-                        //sw1.Write("+1 ");
+                        
 
                         AddData("all_word_arrays", "Sentiment", "+1", "company", CompanyVariable, 1);
-                        //File.WriteAllText(CompanyFiles + "\\" + FileVariable + ".train", "yes");
-                        //int test = TweetsFile.IndexOf("hi", 0, StringComparison.CurrentCultureIgnoreCase);
+                        
+                        
 
-                        //for (int ii = 1; ii <= File.ReadAllLines(AllTweetWords).Length; ii++)
+                        
                         for (int ii = 1; ii <= LoadData("all_tweet_words", "word", "", 1)[1].Count; ii++)
                         {
-                            //if (item.Text.Contains((File.ReadAllLines(AllTweetWords)[ii - 1] + " "), StringComparison.OrdinalIgnoreCase))
+                            
                             if (item.Text.Contains(((LoadData("all_tweet_words", "word", "", 1)[1])[ii - 1] + " "), StringComparison.OrdinalIgnoreCase))
                             {
-                                //sw1.Write(ii + ":1 ");
-                                UpdateData("all_word_arrays", "word" + ii, ii + ":1 ", ID, 1);               // need to add data in string without error or replacing
+                                
+                                UpdateData("all_word_arrays", "word" + ii, ii + ":1 ", ID, 1);               
                             }
                             else
                             {
-                                //sw1.Write(ii + ":0 ");
+                                
                                 UpdateData("all_word_arrays", "Word" + ii, ii + ":0 ", ID, 1);
                             }
                         }
 
                         ID++;
                         Console.WriteLine("done with tweet company table 1");
-                        //sw1.WriteLine("");
-                        //sw1.Close();
+                        
+                        
                     }
-                    //else if ((item.Text.Contains((File.ReadAllLines(StockSymbols)[i] + " "), StringComparison.OrdinalIgnoreCase) || item.Text.Contains((File.ReadAllLines(StockNames)[i] + " "), StringComparison.OrdinalIgnoreCase)) && !FileVar2Set)
+                    
                     else if ((item.Text.Contains(((LoadData("all_companies", "symbol", "name", 1)[1])[i] + " "), StringComparison.OrdinalIgnoreCase) || item.Text.Contains(((LoadData("all_companies", "symbol", "name", 1)[2])[i] + " "), StringComparison.OrdinalIgnoreCase)) && !FileVar2Set)
                     {
-                        //FileVariable2 = File.ReadAllLines(StockSymbols)[i];
+                        
                         CompanyVariable2 = (LoadData("all_companies", "symbol", "name", 1)[1])[i];
                         FileVar2Set = true;
-                        //item.Text = item.Text.Replace(File.ReadAllLines(StockSymbols)[i], "");
-                        //item.Text = item.Text.Replace(File.ReadAllLines(StockNames)[i], "");
+                        
+                        
 
                         /*item.Text = Regex.Replace(item.Text, @"@\w+", "USERNAME");
-                        item.Text = Regex.Replace(item.Text, @"https?://[-\w]+(\.\w[-\w]*)+(:\d+)?(/[^.!,?;""\'<>()\[\]\{\}\s\x7F-\xFF]*([.!,?]+[^.!,?;""\'<>\(\)\[\]\{\}\s\x7F-\xFF]+)*)?", "URL");
-                        item.Text = item.Text.Replace("https://", "URL");*/
+                        item.Text = Regex.Replace(item.Text, @"https?:
+                        item.Text = item.Text.Replace("https:
 
-                        //StreamWriter sw1 = new StreamWriter(CompanyFiles + "\\" + FileVariable2 + ".train", true);
+                        
 
-                        //CreateTable(CompanyVariable2, "ID", "INT", "Sentiment", "INT", "Words", "VarChar(1000)", 2);
-                        //Console.WriteLine("new table 2 created");
+                        
+                        
 
-                        //sw1.Write("+1 ");
+                        
 
                         AddData("all_word_arrays", "Sentiment", "+1", "company", CompanyVariable2, 1);
-                        //for (int ii = 1; ii <= File.ReadAllLines(AllTweetWords).Length; ii++)
+                        
                         for (int ii = 1; ii <= LoadData("all_tweet_words", "word", "", 1)[1].Count; ii++)
                         {
-                            //if (item.Text.Contains((File.ReadAllLines(AllTweetWords)[ii - 1] + " "), StringComparison.OrdinalIgnoreCase))
+                            
                             if (item.Text.Contains(((LoadData("all_tweet_words", "word", "", 1)[1])[ii - 1] + " "), StringComparison.OrdinalIgnoreCase))
                             {
-                                //sw1.Write(ii + ":1 ");
+                                
                                 UpdateData("all_word_arrays", "Word" + ii, ii + ":1 ", ID, 1);
                             }
                             else
                             {
-                                //sw1.Write(ii + ":0 ");
+                                
                                 UpdateData("all_word_arrays", "Word" + ii, ii + ":0 ", ID, 1);
                             }
                         }
 
                         ID++;
                         Console.WriteLine("done with tweet company table 2");
-                        //sw1.WriteLine("");
-                        //sw1.Close();
+                        
+                        
                     }
-                    //else if ((item.Text.Contains((File.ReadAllLines(StockSymbols)[i] + " "), StringComparison.OrdinalIgnoreCase) || item.Text.Contains((File.ReadAllLines(StockNames)[i] + " "), StringComparison.OrdinalIgnoreCase)) && !FileVar3Set)
+                    
                     else if ((item.Text.Contains(((LoadData("all_companies", "symbol", "name", 1)[1])[i] + " "), StringComparison.OrdinalIgnoreCase) || item.Text.Contains(((LoadData("all_companies", "symbol", "name", 1)[2])[i] + " "), StringComparison.OrdinalIgnoreCase)) && !FileVar3Set)
                     {
-                        //FileVariable3 = File.ReadAllLines(StockSymbols)[i];
+                        
                         CompanyVariable3 = (LoadData("all_companies", "symbol", "name", 1)[1])[i];
                         FileVar3Set = true;
-                        //item.Text = item.Text.Replace(File.ReadAllLines(StockSymbols)[i], "");
-                        //item.Text = item.Text.Replace(File.ReadAllLines(StockNames)[i], "");
+                        
+                        
 
                         /*item.Text = Regex.Replace(item.Text, @"@\w+", "USERNAME");
-                        item.Text = Regex.Replace(item.Text, @"https?://[-\w]+(\.\w[-\w]*)+(:\d+)?(/[^.!,?;""\'<>()\[\]\{\}\s\x7F-\xFF]*([.!,?]+[^.!,?;""\'<>\(\)\[\]\{\}\s\x7F-\xFF]+)*)?", "URL");
-                        item.Text = item.Text.Replace("https://", "URL");*/
+                        item.Text = Regex.Replace(item.Text, @"https?:
+                        item.Text = item.Text.Replace("https:
 
-                        //StreamWriter sw1 = new StreamWriter(CompanyFiles + "\\" + FileVariable3 + ".train", true);
+                        
 
-                        //CreateTable(CompanyVariable3, "ID", "INT", "Sentiment", "INT", "Words", "VarChar(1000)", 2);
-                        //Console.WriteLine("new table 3 created");
+                        
+                        
 
-                        //sw1.Write("+1 ");
+                        
 
                         AddData("all_word_arrays", "Sentiment", "+1", "company", CompanyVariable3, 1);
-                        //for (int ii = 1; ii <= File.ReadAllLines(AllTweetWords).Length; ii++)
+                        
                         for (int ii = 1; ii <= LoadData("all_tweet_words", "word", "", 1)[1].Count; ii++)
                         {
-                            //if (item.Text.Contains((File.ReadAllLines(AllTweetWords)[ii - 1] + " "), StringComparison.OrdinalIgnoreCase))
+                            
                             if (item.Text.Contains(((LoadData("all_tweet_words", "word", "", 1)[1])[ii - 1] + " "), StringComparison.OrdinalIgnoreCase))
                             {
-                                //sw1.Write(ii + ":1 ");
+                                
                                 UpdateData("all_word_arrays", "Word" + ii, ii + ":1 ", ID, 1);
                             }
                             else
                             {
-                                //sw1.Write(ii + ":0 ");
+                                
                                 UpdateData("all_word_arrays", "Word" + ii, ii + ":0 ", ID, 1);
                             }
                         }
 
                         ID++;
                         Console.WriteLine("done with company table 3");
-                        //sw1.WriteLine("");
-                        //sw1.Close();
+                        
+                        
                     }
                 }
                 FileVarSet = false;
                 FileVar2Set = false;
                 FileVar3Set = false;
 
-                //sw.WriteLine(item.Text);
+                
                 AddData("edited_tweets", "tweet", item.Text, "", "", 1);
             }
-            //sw.Close();
+            
 
-            //File.WriteAllText(file, File.ReadAllText(file).Replace("RT @", ""));
+            
             Console.WriteLine("I made it!!! Phew.");
             Console.ReadLine();
         }
 
-        //Gets tweets
+        
         public static List<Status> GetTwitterFeeds()
         {
-            //string screenname = "realdonaldtrump";
+            
             string screenname = "WSJ";
 
             var auth = new SingleUserAuthorizer
             {
                 CredentialStore = new InMemoryCredentialStore()
                 {
-                    // change your AppSetting keys according to your app.
+                    
                     ConsumerKey = "qGuAmepeXNmKBX94XdFkHa8Pz",
                     ConsumerSecret = "wNcdbn3jYSITazILqOG33Lj1RY2k6kUlKaG2cjKnEuWZ4YWIZP",
                     OAuthToken = "901596402383544320-V4szsa3jD5vfW7L3HtZpcZ7jVMl67ek",
@@ -369,23 +385,23 @@ namespace TwitterAPIIntegration
             bool flag = true;
             var statusResponse = new List<Status>();
             
-            //Get tweets if these conditions are met
-            //How could I use MySql tables for this?
+            
+            
             statusResponse = (from tweet in twitterCtx.Status
                               where tweet.Type == StatusType.Home
-                                    //&& tweet.ScreenName == screenname
+                                    
                                     && tweet.Count == 200
                                     && (DateTime)tweet.CreatedAt >= DateTime.Today
                                     && LoadData("all_companies", "symbol", "name", 1)[1].Any(w => tweet.Text.Contains(w)) || LoadData("all_companies", "symbol", "name", 1)[2].Any(w => tweet.Text.Contains(w))
-                                    //&& (File.ReadAllLines(StockSymbols).Any(tweet.Text.Contains) || File.ReadAllLines(StockNames).Any(tweet.Text.Contains))
+                                    
                               
-                                    //How could I use MySql tables instead of a file for this line?
-                                    //&& (File.ReadAllLines(StockSymbols).Any(tweet.Text.Contains) || File.ReadAllLines(StockNames).Any(tweet.Text.Contains))
+                                    
+                                    
                               
-                                    //&& keyWords.Any(tweet.Text.Contains)
-                                    //&& tweet.Text.Contains("lockheed")
-                                    //&& !File.ReadAllText(PrevTweets).Contains(tweet.Text)
-                                    //&& !tweet.Text.Any(File.ReadAllText(PrevTweets).Contains)
+                                    
+                                    
+                                    
+                                    
                                     && !LoadData("previous_tweets", "tweet", "", 1)[1].Any(w => tweet.Text.Contains(w))
                               select tweet).ToList();
 
@@ -403,16 +419,16 @@ namespace TwitterAPIIntegration
                 {
                     statusResponse = (from tweet in twitterCtx.Status
                                       where tweet.Type == StatusType.Home
-                                            //&& tweet.ScreenName == screenname
+                                            
                                             && tweet.MaxID == maxId
                                             && tweet.Count == 200
                                             && (DateTime)tweet.CreatedAt >= DateTime.Today
                                             && LoadData("all_companies", "symbol", "name", 1)[1].Any(w => tweet.Text.Contains(w)) || LoadData("all_companies", "symbol", "name", 1)[2].Any(w => tweet.Text.Contains(w))
-                                            //&& (File.ReadAllLines(StockSymbols).Any(tweet.Text.Contains) || File.ReadAllLines(StockNames).Any(tweet.Text.Contains))
-                                            //&& keyWords.Any(tweet.Text.Contains)
-                                            //&& tweet.Text.Contains("lockheed")
-                                            //&& !File.ReadAllText(PrevTweets).Contains(tweet.Text)
-                                            //&& !tweet.Text.Any(File.ReadAllText(PrevTweets).Contains)
+                                            
+                                            
+                                            
+                                            
+                                            
                                             && !LoadData("previous_tweets", "tweet", "", 1)[1].Any(w => tweet.Text.Contains(w))
                                       select tweet).ToList();
 
@@ -443,8 +459,8 @@ namespace TwitterAPIIntegration
         public static string ReplaceChars(string input)
         {
             string output = Regex.Replace(input, @"@\w+", "USERNAME ");
-            output = Regex.Replace(output, @"https?://[-\w]+(\.\w[-\w]*)+(:\d+)?(/[^.!,?;""\'<>()\[\]\{\}\s\x7F-\xFF]*([.!,?]+[^.!,?;""\'<>\(\)\[\]\{\}\s\x7F-\xFF]+)*)?", "URL ");
-            output = output.Replace("https://", "URL ");
+            output = Regex.Replace(output, @"https?:
+            output = output.Replace("https:
             output = output.Replace(":", "");
             output = output.Replace("#", "");
             output = output.Replace("…", "");
@@ -466,4 +482,4 @@ namespace TwitterAPIIntegration
 #endif
 
     }
-}
+}/*}}}*/
